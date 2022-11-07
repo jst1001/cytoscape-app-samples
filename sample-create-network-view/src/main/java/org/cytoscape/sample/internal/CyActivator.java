@@ -11,6 +11,8 @@ import org.cytoscape.session.CyNetworkNaming;
 
 import java.util.Properties;
 
+import static java.sql.DriverManager.println;
+
 
 public class CyActivator extends AbstractCyActivator {
 	public CyActivator() {
@@ -19,21 +21,31 @@ public class CyActivator extends AbstractCyActivator {
 
 
 	public void start(BundleContext bc) {
+		println("HERE 1");
 
 		CyNetworkNaming cyNetworkNamingServiceRef = getService(bc,CyNetworkNaming.class);
+		println("HERE 2");
 		
 		CyNetworkFactory cyNetworkFactoryServiceRef = getService(bc,CyNetworkFactory.class);
+		println("HERE 3");
 		CyNetworkManager cyNetworkManagerServiceRef = getService(bc,CyNetworkManager.class);
+		println("HERE 4");
 
 		CyNetworkViewFactory cyNetworkViewFactoryServiceRef = getService(bc,CyNetworkViewFactory.class);
+		println("HERE 5");
 		CyNetworkViewManager cyNetworkViewManagerServiceRef = getService(bc,CyNetworkViewManager.class);
+		println("HERE 6");
 		
 		CreateNetworkViewTaskFactory createNetworkViewTaskFactory = new CreateNetworkViewTaskFactory(cyNetworkNamingServiceRef, cyNetworkFactoryServiceRef,cyNetworkManagerServiceRef, cyNetworkViewFactoryServiceRef,cyNetworkViewManagerServiceRef);
-				
+		println("HERE 7");
 		Properties createNetworkViewTaskFactoryProps = new Properties();
+		println("HERE 8");
 		createNetworkViewTaskFactoryProps.setProperty("preferredMenu","Apps.Samples");
+		println("HERE 9");
 		createNetworkViewTaskFactoryProps.setProperty("title","Create Network View");
+		println("HERE 10");
 		registerService(bc,createNetworkViewTaskFactory,TaskFactory.class, createNetworkViewTaskFactoryProps);
+		println("HERE 11");
 	}
 }
 
