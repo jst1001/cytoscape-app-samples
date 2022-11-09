@@ -138,6 +138,12 @@
 			<scope>system</scope>
 			<systemPath>/Users/jthompson/cytoscapeSamples/cytoscape-app-samples/sample-create-network-view/src/json-20220924.jar</systemPath>
 		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>layout-api</artifactId>
+			<version>3.0.0</version>
+			<scope>compile</scope>
+		</dependency>
 	</dependencies>
 
 </project>

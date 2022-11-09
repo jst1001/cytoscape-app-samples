@@ -42,10 +42,18 @@ import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyEdge;
 import org.cytoscape.session.CyNetworkNaming;
+import org.cytoscape.view.layout.CyLayoutAlgorithm;
+import org.cytoscape.view.layout.CyLayoutAlgorithmManager;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewFactory;
 import org.cytoscape.view.model.CyNetworkViewManager;
+import org.cytoscape.view.model.View;
+import org.cytoscape.view.presentation.property.BasicVisualLexicon;
+import org.cytoscape.view.vizmap.VisualMappingManager;
+import org.cytoscape.view.vizmap.VisualStyle;
 import org.cytoscape.work.AbstractTask;
+import org.cytoscape.work.Task;
+import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskMonitor;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -60,13 +68,20 @@ public class CreateNetworkViewTask extends AbstractTask {
 	private final CyNetworkManager networkManager;
 	private final CyNetworkNaming cyNetworkNaming;
 
+	private final VisualMappingManager vmmServiceRef;
+
+	private final CyLayoutAlgorithmManager layoutManager;
+
 	public CreateNetworkViewTask(CyNetworkNaming cyNetworkNaming, CyNetworkFactory cnf, CyNetworkManager networkManager,
-			CyNetworkViewFactory cnvf, final CyNetworkViewManager networkViewManager) {
+			CyNetworkViewFactory cnvf, final CyNetworkViewManager networkViewManager, final VisualMappingManager vmmServiceRef,
+			final CyLayoutAlgorithmManager layoutManager) {
 		this.cnf = cnf;
 		this.cnvf = cnvf;
 		this.networkViewManager = networkViewManager;
 		this.networkManager = networkManager;
 		this.cyNetworkNaming = cyNetworkNaming;
+		this.vmmServiceRef = vmmServiceRef;
+		this.layoutManager = layoutManager;
 	}
 
 	public void run(TaskMonitor monitor) throws IOException {
@@ -195,8 +210,66 @@ public class CreateNetworkViewTask extends AbstractTask {
 //				Double myDec = (Double) (double) i;
 //				Double myDec = Double.valueOf(1.5);
 				myNet.getDefaultEdgeTable().getRow(myEdge.getSUID()).set("metric", myDec);
+
+
+//				View<CyEdge> edgeView = netView.getEdgeView(myEdge);
+//				double newLineWidth = edgeView.getVisualProperty(BasicVisualLexicon.NODE_BORDER_WIDTH)*2;
+				//nodeView.setVisualProperty(BasicVisualLexicon.NODE_BORDER_WIDTH, lineWidth);
+				//View.setLockedValue(BasicVisualLexicon.NODE_BORDER_WIDTH, newLineWidth);
 			}
 
+			this.networkManager.addNetwork(myNet);
+//			final Collection<CyNetworkView> views = this.networkViewManager.getNetworkViews(myNet);
+			CyNetworkView netView = null;
+//			if(views.size() != 0)
+//				netView = views.iterator().next();
+
+//			if(netView == null) {
+			netView = cnvf.createNetworkView(myNet);
+			networkViewManager.addNetworkView(netView);
+//			}
+
+//			for (int i = 0; i < nodeArray.length(); i++){
+//				myNode = myNet.getNode(myNet.getNodeList().get(i).getSUID());
+//				View<CyNode> nodeView = netView.getNodeView((myNode));
+//				String nodeName = myNet.getDefaultNodeTable().getRow(myNode.getSUID()).get("name", String.class);
+//				nodeView.setVisualProperty(BasicVisualLexicon.NODE_LABEL, nodeName);
+//			}
+//
+//			for (int i = 0 ; i < edgeArray.length(); i++) {
+//				//obj = edgeArray.get(0);
+////				JSONArray edge = (JSONArray) edgeArray.get(i);
+//				CyEdge myEdge = myNet.getEdge(myNet.getEdgeList().get(i).getSUID());
+////				CyEdge myEdge = myNet.addEdge(nodeHashMap.get(edge.get(0)), nodeHashMap.get(edge.get(1)), true);
+////				Double myDec = (Double) ((BigDecimal) edge.get(2)).doubleValue();
+////				Double myDec = (Double) (double) i;
+////				Double myDec = Double.valueOf(1.5);
+////				myNet.getDefaultEdgeTable().getRow(myEdge.getSUID()).set("metric", myDec);
+//
+//
+//				View<CyEdge> edgeView = netView.getEdgeView(myEdge);
+//				String metricValue = myNet.getDefaultEdgeTable().getRow(myEdge.getSUID()).get("metric", Double.class).toString();
+//				edgeView.setVisualProperty(BasicVisualLexicon.EDGE_LABEL, metricValue);
+//				//double newLineWidth = edgeView.getVisualProperty(BasicVisualLexicon.NODE_BORDER_WIDTH)*2;
+//				//nodeView.setVisualProperty(BasicVisualLexicon.NODE_BORDER_WIDTH, lineWidth);
+//				//View.setLockedValue(BasicVisualLexicon.NODE_BORDER_WIDTH, newLineWidth);
+//			}
+
+			// Apply the change to the view
+			VisualStyle style = vmmServiceRef.getCurrentVisualStyle();
+			style.setDefaultValue(BasicVisualLexicon.NODE_LABEL,"name");
+			style.setDefaultValue(BasicVisualLexicon.EDGE_LABEL,"metric");
+			style.apply(netView);
+			netView.updateView();
+
+			CyLayoutAlgorithm layout = layoutManager.getLayout("hierarchical");
+			TaskIterator itr = layout.createTaskIterator(netView, layout.getDefaultLayoutContext(), CyLayoutAlgorithm.ALL_NODE_VIEWS, "");
+			Task nextTask = itr.next();
+			try {
+				nextTask.run(monitor);
+			} catch (Exception e) {
+				throw new RuntimeException("Could not finish layout", e);
+			}
 
 //			CyNode node1 = myNet.addNode();
 //
@@ -208,26 +281,30 @@ public class CreateNetworkViewTask extends AbstractTask {
 
 			if (myNet == null)
 				return;
-			this.networkManager.addNetwork(myNet);
+//			this.networkManager.addNetwork(myNet);
 
-			final Collection<CyNetworkView> views = networkViewManager.getNetworkViews(myNet);
-			CyNetworkView myView = null;
-			if(views.size() != 0)
-				myView = views.iterator().next();
-
-			if (myView == null) {
-				// create a new view for my network
-				myView = cnvf.createNetworkView(myNet);
-				networkViewManager.addNetworkView(myView);
-			} else {
-				System.out.println("networkView already existed.");
-			}
+//			final Collection<CyNetworkView> views = networkViewManager.getNetworkViews(myNet);
+//			CyNetworkView myView = netView;
+//			if(views.size() != 0)
+//				myView = views.iterator().next();
+//
+//			if (myView == null) {
+//				 create a new view for my network
+//				myView = cnvf.createNetworkView(myNet);
+//				networkViewManager.addNetworkView(myView);
+//			} else {
+//				System.out.println("networkView already existed.");
+//			}
 
 			// Set the variable destroyView to true, the following snippet of code
 			// will destroy a view
+
+//			CyNetworkView myView = cnvf.createNetworkView(myNet);
+//			networkViewManager.addNetworkView(myView);
+
 			boolean destroyView = false;
 			if (destroyView) {
-				networkViewManager.destroyNetworkView(myView);
+				networkViewManager.destroyNetworkView(netView);
 			}
 		} catch (Exception e){
 			Double x = 1.0;
